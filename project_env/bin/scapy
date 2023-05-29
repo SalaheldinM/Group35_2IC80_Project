@@ -1,0 +1,10 @@
+#!/home/attacker/Documents/Group35_2IC80_Project/project_env/bin/python3
+# EASY-INSTALL-ENTRY-SCRIPT: 'scapy==2.5.0','console_scripts','scapy'
+__requires__ = 'scapy==2.5.0'
+import sys
+from pkg_resources import load_entry_point
+
+if __name__ == '__main__':
+    sys.exit(
+        load_entry_point('scapy==2.5.0', 'console_scripts', 'scapy')()
+    )
