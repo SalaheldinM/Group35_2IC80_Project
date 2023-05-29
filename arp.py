@@ -23,7 +23,7 @@ class Arper():
         self.gateway = gateway
         self.gatewayMac = get_mac(gateway)
         self.interface = interface
-        conf,iface = interface
+        iface = interface
         conf.verb = 0
 
         print('Initialized {}:'.format(interface))
@@ -117,6 +117,12 @@ class Arper():
             hwdst='ff:ff:ff:ff:ff:ff'), count=5)
         
 if __name__ == '__main__':
-    (victim, gateway, interface) = (sys.argv[1], sys.argv[2], sys.argv[3])
+
+    victim = sys.argv[1]
+
+    gateway = sys.argv[2]
+
+    interface = sys.argv[3]
+
     myarp = Arper(victim, gateway, interface)
     myarp.run()
