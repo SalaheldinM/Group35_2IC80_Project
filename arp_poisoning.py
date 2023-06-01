@@ -55,7 +55,7 @@ class ARPPoisoning():
                             pdst = self.victimTwoIP,
                             hwdst = self.victimTwoMac)
 
-        # Infinitely poisons the victim and the spoofed device
+        # Infinitely poisons the victims
         while True:
             try: # Send poison packets
                 scapy.send(victimOnePoisonPacket)
