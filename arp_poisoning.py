@@ -73,14 +73,14 @@ class ARPPoisoning():
             psrc=self.victimTwoIP,
             hwsrc=self.victimTwoMac,
             pdst=self.victimOneIP,
-            hwdst=self.victimOneMac), count=5)
+            hwdst="ff:ff:ff:ff:ff:ff"), count=5)
         # Clean victim two's ARP Table
         scapy.send(scapy.ARP(
             op=2,
             psrc=self.victimOneIP,
             hwsrc=self.victimOneMac,
             pdst=self.victimTwoIP,
-            hwdst=self.victimTwoMac), count=5)
+            hwdst="ff:ff:ff:ff:ff:ff"), count=5)
 
 # Starts the program
 if __name__ == '__main__':
