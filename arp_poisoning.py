@@ -4,7 +4,7 @@ import sys, time
 
 # Constants
 DIVIDER = '=' * 60
-POISON_BREAK = 2
+POISON_BREAK = 30
 
 # ARP Poisoning Attack
 class ARPPoisoning():
