@@ -82,7 +82,7 @@ class ARPMITMSpoofing():
         scapy.wrpcap('sniffedPackets.pcap', incomingPackets) # Save sniffed packets
 
     def processPacket(self, packet):
-        packet.show() # lambda x: x.summary()
+        packet.show()
         scapy.sendp(packet)
 
     # Clean ARP tables of the victims
