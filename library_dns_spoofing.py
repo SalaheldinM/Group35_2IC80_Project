@@ -6,8 +6,8 @@ import sys, time, multiprocessing
 DIVIDER = '=' * 60
 POISON_BREAK = 30
 
-# ARP Man in the Middle DNS Spoofing Attack
-class ARPMITMDNSSpoofing():
+# DNS Spoofing Attack
+class DNSSpoofing():
     # Constructs the ARP Man in the Middle DNS Spoofing Attack
     def __init__(self, victimIP, interface):
         # Assign default scapy interface
@@ -25,17 +25,17 @@ class ARPMITMDNSSpoofing():
 
     # Returns interactive prompt string
     def __repr__(self):
-        return 'ARPMITMDNSPoisoning({}, {})'.format(self.victimIP, self.interface)
+        return 'DNSPoisoning({}, {})'.format(self.victimIP, self.interface)
 
     # Returns string representation
     def __str__(self):
-        return 'ARP Man in the Middle DNS Poisoning on {}:\n - Victim IP {} at {}'.format(
+        return 'DNS Poisoning on {}:\n - Victim IP {} at {}'.format(
                 self.interface, self.victimIP, self.victimMac)
 
     # Print Initialization Message
     def printInitializationMessage(self):
         print('{divider}\nRunning {str}\n{divider}'.format(divider = DIVIDER, str = self))
-        print('Press [CTRL-C] to stop the ARP/DNS Poisoning and clean the ARP tables of the victims')
+        print('Press [CTRL-C] to stop the DNS Poisoning and clean the ARP tables of the victims')
 
     # Execute the attack
     def execute(self):
@@ -133,7 +133,7 @@ if __name__ == '__main__':
     interface = sys.argv[2]
 
     # Initialize Attack
-    attack = ARPMITMDNSSpoofing(victimIP, interface)
+    attack = DNSSpoofing(victimIP, interface)
 
     # Execute attack
     attack.execute()
