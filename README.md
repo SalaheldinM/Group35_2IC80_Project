@@ -12,8 +12,8 @@ Implementation of:
 - Divo Gede Arya Divo Abimanyu
 - Aqiel Oostenbrug
 ## ARP Poisoning Attack
-`things to run`
+```things to run```
 ### DNS Spoofing Attack
-`things to run`
+```things to run```
 ## SSL Stripping Attack
-`things to run`
+```things to run```
