@@ -10,6 +10,9 @@ POISON_BREAK = 30
 class ARPPoisoning():
     # Constructs the ARP Poisoning Attack
     def __init__(self, victimOneIP, victimTwoIP, interface):
+        # Disables verbosity (command line) mode
+        scapy.conf.verb = 0
+        
         # Assign targets
         self.victimOneIP = victimOneIP
         self.victimTwoIP = victimTwoIP
@@ -84,8 +87,7 @@ class ARPPoisoning():
 
 # Starts the program
 if __name__ == '__main__':
-    # Disables verbosity (command line) mode
-    scapy.conf.verb = 0
+
 
     # Assign parameters to variables
     victimOneIP = sys.argv[1]
