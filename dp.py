@@ -17,6 +17,10 @@ isARPPoisoningAttack = parseArgs.arp
 isDNSStrippingAttack = parseArgs.dns
 isSSLStrippingAttack = parseArgs.ssl
 
+if (sum([isARPPoisoningAttack, isDNSStrippingAttack, isSSLStrippingAttack]) > 1):
+    print('Multiple attacks cannot be executed at once')
+    raise SystemExit(1)
+
 # Start right attack
 if isARPPoisoningAttack:
     print('ARP Poisoning Attack has been started')
