@@ -1,5 +1,5 @@
 # 2IC80 Default Project
-Implemenation of the default project.
+Implemenation of the default project. <br/>
 <sup><sub>Disclaimer, this is a project for the course 2IC80 (2022-4) Lab on offensive computer security at the Eindhoven University of Technology.<sub/><sup/>
 ## Goals
 Implementation of:
