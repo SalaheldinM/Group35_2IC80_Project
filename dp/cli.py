@@ -96,7 +96,7 @@ def start():
         gatewayIP = parseArgs.gatewayIP
 
         # Assign attack
-        attack = attacks.ARPSSLStripping(victimIP, gatewayip, interface) # TODO: Adapt script
+        attack = attacks.ARPSSLStripping(victimIP, gatewayIP, interface) # TODO: Adapt script
     else:
         # Prints the home screen
         printHome()
