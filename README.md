@@ -12,18 +12,22 @@ Implementation of:
 - Divo Gede Arya Divo Abimanyu
 - Aqiel Oostenbrug
 ## General Execution
+Leads to the welcome and (attack) selection screen.
 ```python
 sudo python dp <victimip> <interface>
 ```
 ## ARP Poisoning Attack
+Direct execution form.
 ```python
 sudo python dp <victimip> <interface> -a -vtip <victimtwoip>
 ```
 ## DNS Spoofing Attack
+Direct execution form.
 ```python
 sudo python dp <victimip> <interface> -da -g <gatewayip> -dnsl <dnslist> -dnsil <dnsiplist>
 ```
 ## SSL Stripping Attack
+Direct execution form.
 ```python
 sudo python dp <victimip> <interface> -sa -g <gatewayip>
 ```
