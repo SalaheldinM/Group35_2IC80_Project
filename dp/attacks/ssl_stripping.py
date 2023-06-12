@@ -5,8 +5,9 @@ import netifaces as ni
 import subprocess
 import logging
 import click
-import URLMonitor
-import CookieCleaner
+from .URLMonitor import URLMonitor
+from .CookieCleaner import CookieCleaner
+from .StrippingProxy import StrippingProxy
 from twisted.web import http
 from twisted.internet import reactor
 
