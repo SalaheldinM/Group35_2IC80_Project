@@ -55,10 +55,10 @@ def start():
         elif attackNumber == 2: # DNS (ARP) Spoofing Attack Flag
             # Initialize missing variables
             gatewayIP = raw_input('Please provide the IP address of the gateway: ')
-            dnsList = raw_input('Please provide the dns names: ').split()
+            dnsList = raw_input('Please provide the DNS names: ').split()
             dnsIPList = raw_input('Please provide the IP Addresses to spoof DNS names to: ').split()
 
-            return attacks.ARPMITMDNSSpoofing(victimIP, gatewayIP, dnsList, dnsIPList, interface) # TODO: Adapt script
+            return attacks.ARPDNSSpoofing(victimIP, gatewayIP, dnsList, dnsIPList, interface) # TODO: Adapt script
         elif attackNumber == 3: # SSL (ARP) Stripping Attack Flag
             # Initialize missing variables
             gatewayIP = raw_input('Please provide the IP address of the gateway: ')
