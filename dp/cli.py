@@ -81,6 +81,11 @@ def start():
         # Initialize related flags
         victimTwoIP = parseArgs.victimTwoIP
 
+        # Check related flags
+        if victimTwoIP == None:
+            print('Second victim IP address was not found, please specify using -vtip')
+            raise SystemExit(1)
+
         # Assign attack
         attack = attacks.ARPPoisoning(victimIP, victimTwoIP, interface) # TODO: Adapt script
     elif isDNSARPStrippingAttack:
@@ -89,11 +94,29 @@ def start():
         dnsList = parseArgs.dnsList
         dnsIPList = parseArgs.dnsIPList
 
+        # Check related flags
+        if gatewayIP == None:
+            print('Gateway IP address was not found, please specify using -g')
+            raise SystemExit(1)
+
+        if dnsList == None:
+            print('DNS list was not found, please specify using -dnsl')
+            raise SystemExit(1)
+
+        if dnsIPList == None:
+            print('DNS IP address list was not found, please specify using -dnsil')
+            raise SystemExit(1)
+
         # Assign attack
         attack = attacks.ARPDNSSpoofing(victimIP, gatewayIP, dnsList, dnsIPList, interface) # TODO: Adapt script
     elif isSSLARPStrippingAttack:
         # Initialize related flags
         gatewayIP = parseArgs.gatewayIP
+
+        # Check related flags
+        if gatewayIP == None:
+            print('Gateway IP address was not found, please specify using -g')
+            raise SystemExit(1)
 
         # Assign attack
         attack = attacks.ARPSSLStripping(victimIP, gatewayIP, interface) # TODO: Adapt script
