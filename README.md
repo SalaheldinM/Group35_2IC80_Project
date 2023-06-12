@@ -13,13 +13,13 @@ Implementation of:
 - Aqiel Oostenbrug
 ## ARP Poisoning Attack
 ```python
-things to run
+sudo python dp <victimip> <interface> -a -vtip <victimtwoip>
 ```
 ## DNS Spoofing Attack
 ```python
-things to run
+sudo python dp <victimip> <interface> -da -g <gatewayip> -dnsl <dnslist> -dnsil <dnsiplist>
 ```
 ## SSL Stripping Attack
 ```python
-things to run
+sudo python dp <victimip> <interface> -sa -g <gatewayip>
 ```
