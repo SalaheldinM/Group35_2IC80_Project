@@ -88,13 +88,13 @@ elif isDNSARPStrippingAttack:
     dnsIPList = parseArgs.dnsIPList
 
     # Assign attack
-    attack = attacks.ARPMITMDNSSpoofing(victimIP, gatewayIP, dnsList, dnsIPList, interface) # TODO: Adapt script
+    attack = attacks.ARPDNSSpoofing(victimIP, gatewayIP, dnsList, dnsIPList, interface) # TODO: Adapt script
 elif isSSLARPStrippingAttack:
     # Initialize related flags
     gatewayIP = parseArgs.gatewayIP
 
     # Assign attack
-    attack = attacks.ARPSSLStripping(victimIP, gatewayip, interface) # TODO: Adapt script
+    attack = attacks.ARPSSLStripping(victimIP, gatewayIP, interface) # TODO: Adapt script
 else:
     # Prints the home screen
     printHome()
