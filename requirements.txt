@@ -1,0 +1,4 @@
+scapy==2.4.5
+netifaces==0.11.0
+twisted==21.7.0
+click==7.4.9
