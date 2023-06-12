@@ -11,6 +11,10 @@ Implementation of:
 - Salaheldin Salaheldin Mokhtar Diaa Abdelmoneim Nounou
 - Divo Gede Arya Divo Abimanyu
 - Aqiel Oostenbrug
+## General Execution
+```python
+sudo python dp <victimip> <interface>
+```
 ## ARP Poisoning Attack
 ```python
 sudo python dp <victimip> <interface> -a -vtip <victimtwoip>
